@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from tasks import create_task
 from pymongo import MongoClient
+from os import environ as env
 
-client = MongoClient("mongodb://mongodb:27017/")
+client = MongoClient(f"mongodb://{env['MONGO_INITDB_ROOT_USERNAME']}:{env['MONGO_INITDB_ROOT_PASSWORD']}@mongodb:{env['MONGO_PORT']}/?authSource=admin")
 db = client["celery_db"]
 collection = db["task_results"]
 
@@ -21,4 +22,7 @@ def run_task(data: str):
 def get_all_tasks():
     tasks = list(collection.find({}, {"_id": 0}))
     return {"tasks": tasks}
+
+
+
 

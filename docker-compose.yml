@@ -1,35 +1,67 @@
-version: '3.8'
-
 services:
   fastapi:
+    container_name: fastapi_container
     build:
       context: .
-      dockerfile: docker/fastapi/Dockerfile
+      # dockerfile: docker/fastapi/Dockerfile
+      # dockerfile: Dockerfile
+    image: ohidur/fastapi-sample-project:3.0.0
+    command: 
+      ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${FASTAPI_HOST_PORT}", "--reload"]      
     ports:
-      - "8000:8000"
+      - ${FASTAPI_HOST_PORT}:${FASTAPI_CONTAINER_PORT}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_PORT: ${MONGO_CONTAINER_PORT}
+      REDIS_PORT: ${REDIS_CONTAINER_PORT}
     depends_on:
       - redis
       - mongodb
+    networks:
+      - fastapi_network
 
   celery:
     build:
       context: .
-      dockerfile: docker/celery/Dockerfile
+      # dockerfile: docker/celery/Dockerfile
+    container_name: celery_container
+    command: 
+      ["celery", "-A", "tasks.celery_app", "worker", "--loglevel=info"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_PORT: ${MONGO_CONTAINER_PORT}
+      REDIS_PORT: ${REDIS_CONTAINER_PORT}
     depends_on:
       - redis
       - mongodb
+    networks:
+      - fastapi_network
 
   redis:
+    container_name: redis_container
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
+    # ports:
+    #   - ${REDIS_HOST_PORT}:${REDIS_CONTAINER_PORT}
+    networks:
+      - fastapi_network
   mongodb:
+    container_name: mongodb_container
     image: mongo:6.0
-    ports:
-      - "27017:27017"
+    # ports:
+    #   - ${MONGO_HOST_PORT}:${MONGO_CONTAINER_PORT}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
     volumes:
-      - mongo_data:/data/db
+      - ./mongo_data:/data/db
+    networks:
+      - fastapi_network
 
 volumes:
   mongo_data:
+
+networks:
+  fastapi_network:
+    driver: bridge
